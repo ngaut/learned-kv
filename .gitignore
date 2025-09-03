@@ -1,0 +1,45 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+
+# Performance and profiling
+/target/criterion/
+*.profdata
+*.profraw
+flamegraph.svg
+perf.data
+perf.data.old
+
+# Test artifacts
+test_serialization.bin
+colors.bin
+
+# Documentation
+/target/doc/
+
+# Coverage reports
+*.lcov
+/coverage/
+tarpaulin-report.html
