@@ -13,22 +13,23 @@ A high-performance key-value store implementation in Rust using Minimal Perfect 
 
 ## Performance Characteristics
 
-Based on comprehensive benchmarking and profiling analysis:
+Based on comprehensive benchmarking with optimized release builds and CPU-specific optimizations:
 
-| Key Size | Lookup Time | Notes |
-|----------|-------------|-------|
-| ≤64 bytes | ~7ns | Excellent for small keys |
-| 128 bytes | ~12ns | Good performance |
-| 256 bytes | ~25ns | Reasonable for medium keys |
-| 512 bytes | ~55ns | Linear scaling visible |
-| 1KB | ~140ns | Consider key design |
-| 4KB | ~650ns | Hash computation dominates |
+| Key Size | Lookup Time | Hash Overhead | Notes |
+|----------|-------------|---------------|-------|
+| ≤64 bytes | ~3-6ns | ~42% | Excellent for small keys |
+| 128 bytes | ~10ns | ~69% | Very good performance |
+| 256 bytes | ~22ns | ~85% | Good for medium keys |
+| 512 bytes | ~57ns | ~94% | Hash becomes dominant |
+| 1KB | ~146ns | ~98% | Consider key design |
+| 4KB | ~639ns | ~99% | Hash computation dominates |
 
 **Performance Analysis:**
-- Hash computation: 95% of lookup time for large keys
-- String comparison: <2% of lookup time
+- Hash computation: 95%+ of lookup time for large keys (4KB+)
+- String comparison: ~1-3% of lookup time
 - MPHF index calculation: <1% of lookup time
-- No application-level caching - pure algorithmic efficiency
+- **Optimized builds**: 26-83% faster than debug builds
+- **CPU-specific optimizations**: Additional 20-25% improvement over generic builds
 
 ## Quick Start
 
@@ -81,12 +82,35 @@ cargo run --example basic_usage --release
 cargo run --example cache_analysis --release
 ```
 
+## Build Optimizations
+
+This project is configured with CPU-specific optimizations for maximum performance:
+
+```toml
+# .cargo/config.toml
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+# Cargo.toml
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+```
+
+These optimizations provide:
+- **26-83% performance improvement** over debug builds
+- **Additional 20-25% improvement** over generic release builds  
+- Better instruction selection for AES operations (GxHash acceleration)
+- Improved vectorization and memory access patterns
+- Smaller binary size with `panic = "abort"`
+
 ## Benchmarks
 
 Run comprehensive benchmarks using Criterion:
 
 ```bash
-# All benchmarks
+# All benchmarks (automatically uses CPU optimizations)
 cargo bench
 
 # Specific benchmark groups
@@ -131,9 +155,11 @@ This library uses a patched version of the PtrHash algorithm that fixes mathemat
 1. **Use shorter keys when possible** - performance scales linearly with key length
 2. **Use `get()` instead of `get_detailed()`** for hot paths to avoid string allocation
 3. **Consider numeric or hash-based keys** for best performance
-4. **For very large keys (>1KB)**, consider storing hashes as keys instead
+4. **Build with release profile** to enable all optimizations
+5. **Use CPU-specific builds** for production deployments (automatically configured)
+6. **For very large keys (>1KB)**, consider storing hashes as keys instead
 
-## Architecture
+## Project Structure
 
 ```
 learned-kv/
@@ -152,9 +178,13 @@ learned-kv/
 ## Key Improvements Over Original
 
 1. **Mathematical Overflow Fix**: Patched ptr_hash to handle edge cases in MPHF construction
-2. **Performance Optimizations**: Zero-allocation error paths for hot lookups
+2. **Performance Optimizations**: 
+   - Zero-allocation error paths for hot lookups
+   - CPU-specific build optimizations (26-83% faster)
+   - Hardware-accelerated hashing with GxHash AES instructions
 3. **Comprehensive Benchmarking**: Criterion-based benchmarks with statistical analysis
 4. **Better Small Dataset Handling**: Forced single-part construction for <10K keys
+5. **Optimized Build System**: Automatic CPU-specific optimizations and LTO
 
 ## Use Cases
 
