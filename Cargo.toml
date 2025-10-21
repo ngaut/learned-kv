@@ -23,6 +23,9 @@ name = "basic_usage"
 [[example]]
 name = "cache_analysis"
 
+[[example]]
+name = "component_analysis"
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
