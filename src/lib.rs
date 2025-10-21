@@ -26,11 +26,11 @@
 //! use learned_kv::VerifiedKvStore;
 //! use std::collections::HashMap;
 //!
-//! // Build from HashMap
+//! // Build from HashMap - use new_string() for String keys
 //! let mut data = HashMap::new();
 //! data.insert("key1".to_string(), "value1".to_string());
 //! data.insert("key2".to_string(), "value2".to_string());
-//! let store = VerifiedKvStore::new(data).unwrap();
+//! let store = VerifiedKvStore::new_string(data).unwrap();
 //!
 //! // Safe lookup with key verification
 //! match store.get(&"key1".to_string()) {
@@ -70,7 +70,7 @@ mod tests {
         data.insert("key2".to_string(), "value2".to_string());
         data.insert("key3".to_string(), "value3".to_string());
 
-        let store = VerifiedKvStore::new(data).unwrap();
+        let store = VerifiedKvStore::new_string(data).unwrap();
 
         assert_eq!(store.len(), 3);
         assert!(!store.is_empty());
@@ -151,6 +151,7 @@ mod tests {
             data.insert(i, format!("value_{}", i));
         }
 
+        // Using new() is correct here - keys are integers (i32), not Strings
         let store = VerifiedKvStore::new(data).unwrap();
         assert_eq!(store.len(), 100);
 
