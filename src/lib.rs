@@ -1,49 +1,44 @@
 //! # VerifiedKvStore
 //!
-//! A high-performance key-value store implementation using Minimal Perfect Hash Functions (MPHF).
+//! A high-performance **String key-value store** using Minimal Perfect Hash Functions (MPHF).
 //!
-//! ## Performance Characteristics
+//! ## Features
 //!
-//! Based on comprehensive benchmarking with optimized release builds:
-//! - **Small keys (64 bytes)**: ~5.3ns lookups
-//! - **Medium keys (128-512 bytes)**: ~10-52ns lookups
-//! - **Large keys (1KB-2KB)**: ~133-318ns lookups (hash computation dominates)
+//! - **String keys only** - Simplified, no type confusion
+//! - **O(1) lookups** - 5-300ns depending on key size
+//! - **Safe verification** - Returns errors for missing keys, never wrong values
+//! - **GxHash** - AES-NI accelerated, handles all string patterns
+//! - **Immutable** - Built once, read many times
+//! - **Serializable** - Save/load to disk
 //!
-//! **Performance bottlenecks:**
-//! - Hash computation: 95% of lookup time for large keys
-//! - String comparison: ~1-3% of lookup time
-//! - MPHF index calculation: <1% of lookup time
+//! ## Performance
 //!
-//! ## Optimization Recommendations
+//! Based on optimized release builds:
+//! - **64 bytes**: ~5ns lookups
+//! - **128-512 bytes**: ~10-52ns lookups
+//! - **1KB-2KB**: ~133-318ns lookups (hash-bound)
 //!
-//! 1. **Use `new()` for String keys** - uses GxHash, handles all patterns including sequential
-//! 2. **Use shorter keys** when possible - performance scales linearly with key length
-//! 3. **Use `get()` instead of `get_detailed()`** for hot paths (avoids string allocation)
-//!
-//! ## Example Usage
+//! ## Quick Start
 //!
 //! ```rust
 //! use learned_kv::VerifiedKvStore;
 //! use std::collections::HashMap;
 //!
-//! // Build from HashMap - use new() for String keys
+//! // Build from HashMap
 //! let mut data = HashMap::new();
 //! data.insert("key1".to_string(), "value1".to_string());
 //! data.insert("key2".to_string(), "value2".to_string());
 //! let store = VerifiedKvStore::new(data).unwrap();
 //!
-//! // Safe lookup with key verification
-//! match store.get(&"key1".to_string()) {
-//!     Ok(value) => println!("Found: {}", value),
-//!     Err(_) => println!("Not found"),
-//! }
+//! // Query
+//! assert_eq!(store.get(&"key1".to_string()).unwrap(), "value1");
 //!
-//! // Full API support
+//! // Iterate
 //! for (key, value) in store.iter() {
 //!     println!("{}: {}", key, value);
 //! }
 //!
-//! // Serialization support
+//! // Serialize
 //! store.save_to_file("data.bin").unwrap();
 //! let loaded: VerifiedKvStore<String> = VerifiedKvStore::load_from_file("data.bin").unwrap();
 //! # std::fs::remove_file("data.bin").ok();

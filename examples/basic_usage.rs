@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_data.insert("blue".to_string(), "#0000FF".to_string());
     color_data.insert("yellow".to_string(), "#FFFF00".to_string());
 
-    // Use new() for String keys - optimized GxHash for all string patterns
+    // Build store with String keys (GxHash automatically used)
     let colors = VerifiedKvStore::new(color_data)?;
 
     println!("Color store created with {} items", colors.len());

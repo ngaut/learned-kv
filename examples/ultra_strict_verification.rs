@@ -50,16 +50,16 @@ fn main() {
     println!("╚═══════════════════════════════════════════════════════╝\n");
     println!("Testing new() with 15+ patterns × 10,000+ keys\n");
 
-    // Test 1: Sequential patterns that previously failed with FxHash
-    println!("=== SEQUENTIAL PATTERNS (Previously Problematic) ===");
+    // Test 1: Sequential patterns (all work reliably with GxHash)
+    println!("=== SEQUENTIAL PATTERNS ===");
     test_pattern("user_N", |i| format!("user_{}", i), 10_000);
     test_pattern("item_N", |i| format!("item_{}", i), 10_000);
     test_pattern("product_N", |i| format!("product_{}", i), 10_000);
     test_pattern("customer_N", |i| format!("customer_{}", i), 10_000);
     test_pattern("order_N", |i| format!("order_{}", i), 10_000);
 
-    // Test 2: Key patterns that work with FxHash (verify still work)
-    println!("\n=== PATTERNS THAT WORK WITH BOTH ===");
+    // Test 2: Common patterns
+    println!("\n=== COMMON PATTERNS ===");
     test_pattern("key_N", |i| format!("key_{}", i), 10_000);
     test_pattern("id_N", |i| format!("id_{}", i), 10_000);
 

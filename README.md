@@ -168,26 +168,17 @@ Benchmark groups:
 
 ## Optimization Tips
 
-1. **Use shorter keys** - Performance scales linearly with key length (0.08-0.15 ns/byte)
-2. **Use `get()` not `get_detailed()`** - Avoids string allocation in hot paths
-3. **Consider numeric keys** - Faster hashing than strings
-4. **Build with `--release`** - Enables all optimizations (26-83% faster)
-5. **For keys >1KB** - Consider storing hashes as keys instead
+1. **Use shorter keys** - Performance scales ~0.1 ns/byte
+2. **Use `get()` not `get_detailed()`** - Avoids string allocation
+3. **Build with `--release`** - Enables optimizations (26-83% faster)
+4. **For keys >1KB** - Consider storing hashes as keys
 
-For advanced optimization strategies, see [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md).
+## Implementation
 
-## Implementation Details
-
-This library uses a patched version of PtrHash that fixes:
-- Mathematical overflow in partitioning logic
-- Instability for small datasets (<10K keys)
-- Performance anomalies with forced single-part construction
-
-Key improvements:
-- Zero-allocation error paths
-- CPU-specific optimizations (AES-NI for hashing)
-- Better small dataset handling
-- LTO and codegen optimizations
+- **PtrHash**: Patched version with overflow fixes and stability improvements
+- **GxHash**: AES-NI accelerated string hashing
+- **Zero-allocation**: Error paths don't allocate
+- **Optimizations**: LTO, CPU-specific builds, single codegen unit
 
 ## Project Structure
 
