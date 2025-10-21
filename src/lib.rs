@@ -5,9 +5,9 @@
 //! ## Performance Characteristics
 //!
 //! Based on comprehensive benchmarking with optimized release builds:
-//! - **Small keys (≤64 bytes)**: ~3-6ns lookups
-//! - **Medium keys (128-512 bytes)**: ~10-57ns lookups
-//! - **Large keys (1KB-2KB)**: ~107-248ns lookups (hash computation dominates)
+//! - **Small keys (64 bytes)**: ~5.3ns lookups
+//! - **Medium keys (128-512 bytes)**: ~10-52ns lookups
+//! - **Large keys (1KB-2KB)**: ~133-318ns lookups (hash computation dominates)
 //!
 //! **Performance bottlenecks:**
 //! - Hash computation: 95% of lookup time for large keys

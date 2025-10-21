@@ -37,14 +37,14 @@ A high-performance key-value store implementation in Rust using Minimal Perfect 
 
 Based on comprehensive benchmarking with optimized release builds and CPU-specific optimizations:
 
-| Key Size | Lookup Time | Hash Overhead | Notes |
-|----------|-------------|---------------|-------|
-| ≤64 bytes | ~3-6ns | ~42% | Excellent for small keys |
-| 128 bytes | ~10ns | ~69% | Very good performance |
-| 256 bytes | ~20ns | ~85% | Good for medium keys |
-| 512 bytes | ~47ns | ~94% | Hash becomes dominant |
-| 1KB | ~107ns | ~98% | Consider key design |
-| 2KB | ~248ns | ~99% | Hash computation dominates |
+| Key Size | Lookup Time | Notes |
+|----------|-------------|-------|
+| 64 bytes | **5.3 ns** | Excellent for small keys |
+| 128 bytes | **10.0 ns** | Very good performance |
+| 256 bytes | **21.4 ns** | Good for medium keys |
+| 512 bytes | **52.1 ns** | Hash becomes dominant |
+| 1KB | **133.0 ns** | Hash computation dominates |
+| 2KB | **317.7 ns** | Consider shorter keys |
 
 **Performance Analysis:**
 - Hash computation: 95%+ of lookup time for large keys (2KB+)
@@ -124,6 +124,23 @@ These optimizations provide:
 - Better instruction selection for AES operations (GxHash acceleration)
 - Improved vectorization and memory access patterns
 - Smaller binary size with `panic = "abort"`
+
+## Benchmarks
+
+Run performance benchmarks to verify lookup and construction times:
+
+```bash
+# Run all benchmarks (automatically uses CPU optimizations)
+cargo bench --bench verified_store_bench
+
+# View previous results (generates HTML reports)
+open target/criterion/report/index.html
+```
+
+**Benchmark groups:**
+- `verified_store_lookups` - Lookup performance with 1K keys
+- `key_length_impact` - Performance across different key sizes (64B to 2KB)
+- `construction` - MPHF construction time for different dataset sizes
 
 ## API Methods
 
