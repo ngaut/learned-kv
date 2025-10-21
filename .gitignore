@@ -33,8 +33,7 @@ perf.data
 perf.data.old
 
 # Test artifacts
-test_serialization.bin
-colors.bin
+*.bin
 
 # Documentation
 /target/doc/
