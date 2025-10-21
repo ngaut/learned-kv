@@ -47,7 +47,29 @@ macro_rules! vec_impl {
         }
         impl Packed for Vec<$t> {
             fn index(&self, index: usize) -> u64 {
-                unsafe { (*self.get_unchecked(index)) as u64 }
+                // SAFETY: PtrHash::index() is designed for keys in the original dataset only.
+                // For non-existent keys, MPHF may return out-of-bounds indices.
+                //
+                // This is NOT a bug - it's expected behavior when:
+                // - VerifiedKvStore queries non-existent keys (safe: checks key match)
+                // - LearnedKvStore queries non-existent keys (unsafe: may return wrong value)
+                //
+                // We return 0 as a sentinel value for out-of-bounds access.
+                // VerifiedKvStore will detect mismatch via key comparison.
+                //
+                // In strict debug mode, log a warning (not panic) for investigation:
+                #[cfg(all(debug_assertions, feature = "strict-debug"))]
+                if index >= self.len() {
+                    eprintln!(
+                        "WARNING: PtrHash remap index {} out of bounds (len={}). \
+                         Querying non-existent key? This is safe for VerifiedKvStore.",
+                        index,
+                        self.len()
+                    );
+                }
+
+                // Safe indexing: returns 0 if out of bounds
+                self.get(index).copied().unwrap_or(0) as u64
             }
             fn prefetch(&self, index: usize) {
                 crate::util::prefetch_index(self, index);

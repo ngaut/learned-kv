@@ -58,6 +58,7 @@ hashers = [
     "dep:wyhash",
 ]
 unstable = []
+strict-debug = []
 
 [lib]
 name = "ptr_hash"

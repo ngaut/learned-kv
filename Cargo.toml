@@ -8,6 +8,7 @@ ptr_hash_fixed = { path = "ptr_hash_patched" }
 serde = { version = "1.0", features = ["derive"] }
 bincode = "1.3"
 thiserror = "1.0"
+crc32fast = "1.4"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }
@@ -20,6 +21,10 @@ name = "cache_analysis"
 
 [[bench]]
 name = "kv_store_bench"
+harness = false
+
+[[bench]]
+name = "key_length_benchmark"
 harness = false
 
 [profile.release]

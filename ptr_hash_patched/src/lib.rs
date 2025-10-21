@@ -141,6 +141,7 @@ mod fastmod;
 mod reduce;
 mod shard;
 mod sort_buckets;
+
 #[doc(hidden)]
 pub mod stats;
 #[cfg(test)]
@@ -478,7 +479,7 @@ impl<Key: KeyT + ?Sized, BF: BucketFn, F: MutPacked, Hx: KeyHasher<Key>>
             } else {
                 let eps = (1.0 - params.alpha) / 2.0;
                 let x = n as f64 * eps * eps / 2.0;
-                
+
                 // Apply mathematical formula for larger datasets where it's stable
                 let target_parts = if x <= 1.0 || x.ln() <= 1e-10 {
                     // Even for larger datasets, if formula is unstable, use size-based heuristic
@@ -491,7 +492,7 @@ impl<Key: KeyT + ?Sized, BF: BucketFn, F: MutPacked, Hx: KeyHasher<Key>>
                         candidate
                     }
                 };
-                
+
                 let parts_per_shard = (target_parts.floor() as usize) / shards;
                 parts_per_shard.max(1) * shards
             }
@@ -508,11 +509,11 @@ impl<Key: KeyT + ?Sized, BF: BucketFn, F: MutPacked, Hx: KeyHasher<Key>>
         // Add a few extra buckets to avoid collisions for small n.
         let buckets_per_part = (keys_per_part as f64 / params.lambda).ceil() as usize + 3;
         let buckets_total = parts * buckets_per_part;
-        
+
         // FIX: Add sanity checks for memory allocation sizes
         const MAX_REASONABLE_BUCKETS: usize = 100_000_000; // 100M buckets = ~100MB for pilots
         const MAX_REASONABLE_SLOTS: usize = 1_000_000_000; // 1B slots
-        
+
         if buckets_total > MAX_REASONABLE_BUCKETS {
             panic!("OVERFLOW PREVENTION: buckets_total ({}) exceeds reasonable limit ({}). This would cause massive memory allocation.", 
                    buckets_total, MAX_REASONABLE_BUCKETS);
