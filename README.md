@@ -1,6 +1,6 @@
 # VerifiedKvStore
 
-A high-performance, immutable key-value store in Rust using Minimal Perfect Hash Functions (MPHF) based on the [PtrHash algorithm](https://github.com/RagnarGrootKoerkamp/ptrhash).
+A high-performance, immutable **String key-value store** in Rust using Minimal Perfect Hash Functions (MPHF) based on the [PtrHash algorithm](https://github.com/RagnarGrootKoerkamp/ptrhash).
 
 ## Quick Start
 
@@ -8,11 +8,11 @@ A high-performance, immutable key-value store in Rust using Minimal Perfect Hash
 use learned_kv::VerifiedKvStore;
 use std::collections::HashMap;
 
-// Build from HashMap (use new_string() for String keys!)
+// Build from HashMap with String keys
 let mut data = HashMap::new();
 data.insert("key1".to_string(), "value1".to_string());
 data.insert("key2".to_string(), "value2".to_string());
-let store = VerifiedKvStore::new_string(data)?;  // Recommended for String keys
+let store = VerifiedKvStore::new(data)?;
 
 // Safe lookup with verification
 match store.get(&"key1".to_string()) {
@@ -29,9 +29,10 @@ store.save_to_file("data.bin")?;
 
 ## Features
 
+- **String keys only** - Designed for bytes/string interface (simplified, no confusion)
 - **O(1) lookups** - Constant-time queries using minimal perfect hash functions
 - **Safe verification** - Returns errors for non-existent keys, never wrong values
-- **Type-safe** - Generic over key and value types
+- **GxHash** - AES-NI accelerated hashing for optimal string key distribution
 - **Serializable** - Save/load to disk with bincode
 - **Zero-allocation** - Hot path lookups have no allocations
 - **Full API** - iter(), keys(), values(), contains_key()
@@ -69,36 +70,7 @@ learned-kv = { path = "path/to/learned-kv" }
 
 ## Important Limitations
 
-### 1. IMPORTANT: Use `new_string()` for String Keys
-
-**For String keys, always use `new_string()` instead of `new()`:**
-
-```rust
-// ✅ CORRECT: Use new_string() for String keys
-let store = VerifiedKvStore::new_string(data)?;
-
-// ❌ WRONG: new() uses FxHash - UNPREDICTABLE failures with string keys
-let store = VerifiedKvStore::new(data)?;  // May panic depending on string content
-```
-
-**Why:**
-- `new()` uses **FxHash** (optimized for integers, NOT strings)
-- `new_string()` uses **GxHash** (optimized for strings, AES-NI accelerated)
-- FxHash behavior with strings is **UNPREDICTABLE** - depends on specific characters
-
-**FxHash failures are UNPREDICTABLE:**
-- ✅ `"key_0"`, `"key_1"`, ... works up to 2000+ keys
-- ❌ `"user_0"`, `"user_1"`, ... fails at ~50-100 keys
-- ❌ `"item_0"`, `"item_1"`, ... fails at ~50-100 keys
-- ❌ Sequential integers `0, 1, 2, ...` fails at ~1000 keys with FxHash
-- **Root cause**: FxHash produces unique hashes but poor distribution for strings, causing PtrHash's probabilistic MPHF construction to fail (not hash collisions)
-
-**Solution: Always use the correct hash function:**
-- ✅ **String keys** → use `new_string()` (GxHash) - handles ALL patterns reliably
-- ✅ **Integer keys** → use `new()` (FxHash) - works well up to ~1000 keys
-- ✅ **Large integer datasets (>1000)** → use GxHash or well-distributed keys
-
-### 2. Slow Load Times
+### 1. Slow Load Times
 
 MPHF is rebuilt on every load (no serialization):
 - 1K keys: ~1-5ms
@@ -107,6 +79,13 @@ MPHF is rebuilt on every load (no serialization):
 - 10M keys: ~5-10s
 
 **Not suitable** for applications requiring fast startup or frequent reloads.
+
+### 2. String Keys Only
+
+Only supports String keys (by design for simplicity). If you need integer keys, convert them to strings:
+```rust
+let key = format!("{}", my_integer);  // Convert integer to String
+```
 
 ### 3. Immutable Data
 
@@ -119,7 +98,7 @@ Cannot modify after construction - requires full rebuild for updates.
 ✅ Read-heavy workloads with infrequent updates
 ✅ Memory-constrained environments (3 bits/key overhead)
 ✅ Need accurate key verification (no false positives)
-✅ Any key type (use `new_string()` for String keys, `new()` for others)
+✅ String keys (all patterns supported: sequential, UUID, numeric, etc.)
 
 ### Don't Use When:
 ❌ Need mutable/updateable data (use HashMap or BTreeMap)
@@ -131,8 +110,7 @@ Cannot modify after construction - requires full rebuild for updates.
 ### Core Operations
 ```rust
 // Construction
-VerifiedKvStore::new_string(data: HashMap<String, V>) -> Result<Self, KvError>  // For String keys
-VerifiedKvStore::new(data: HashMap<K, V>) -> Result<Self, KvError>              // For other types
+VerifiedKvStore::new(data: HashMap<String, V>) -> Result<Self, KvError>
 
 // Lookups
 get(&key) -> Result<&V, KvError>              // Fast, zero-allocation

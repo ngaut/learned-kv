@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert(key, value);
     }
 
-    let store = VerifiedKvStore::new_string(data)?;
+    let store = VerifiedKvStore::new(data)?;
     let all_keys: Vec<String> = store.keys().cloned().collect();
 
     println!(

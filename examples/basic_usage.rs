@@ -38,8 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_data.insert("blue".to_string(), "#0000FF".to_string());
     color_data.insert("yellow".to_string(), "#FFFF00".to_string());
 
-    // Use new_string() for String keys - optimized GxHash for all string patterns
-    let colors = VerifiedKvStore::new_string(color_data)?;
+    // Use new() for String keys - optimized GxHash for all string patterns
+    let colors = VerifiedKvStore::new(color_data)?;
 
     println!("Color store created with {} items", colors.len());
 
@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Serialization example
     println!("\nSerialization example:");
     colors.save_to_file("colors.bin")?;
-    let loaded_colors: VerifiedKvStore<String, String> =
+    let loaded_colors: VerifiedKvStore<String> =
         VerifiedKvStore::load_from_file("colors.bin")?;
     println!(
         "  Successfully saved and loaded {} color codes",

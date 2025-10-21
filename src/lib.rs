@@ -16,7 +16,7 @@
 //!
 //! ## Optimization Recommendations
 //!
-//! 1. **Use `new_string()` for String keys** - uses GxHash, handles all patterns including sequential
+//! 1. **Use `new()` for String keys** - uses GxHash, handles all patterns including sequential
 //! 2. **Use shorter keys** when possible - performance scales linearly with key length
 //! 3. **Use `get()` instead of `get_detailed()`** for hot paths (avoids string allocation)
 //!
@@ -26,11 +26,11 @@
 //! use learned_kv::VerifiedKvStore;
 //! use std::collections::HashMap;
 //!
-//! // Build from HashMap - use new_string() for String keys
+//! // Build from HashMap - use new() for String keys
 //! let mut data = HashMap::new();
 //! data.insert("key1".to_string(), "value1".to_string());
 //! data.insert("key2".to_string(), "value2".to_string());
-//! let store = VerifiedKvStore::new_string(data).unwrap();
+//! let store = VerifiedKvStore::new(data).unwrap();
 //!
 //! // Safe lookup with key verification
 //! match store.get(&"key1".to_string()) {
@@ -45,7 +45,7 @@
 //!
 //! // Serialization support
 //! store.save_to_file("data.bin").unwrap();
-//! let loaded: VerifiedKvStore<String, String> = VerifiedKvStore::load_from_file("data.bin").unwrap();
+//! let loaded: VerifiedKvStore<String> = VerifiedKvStore::load_from_file("data.bin").unwrap();
 //! # std::fs::remove_file("data.bin").ok();
 //! ```
 
@@ -70,7 +70,7 @@ mod tests {
         data.insert("key2".to_string(), "value2".to_string());
         data.insert("key3".to_string(), "value3".to_string());
 
-        let store = VerifiedKvStore::new_string(data).unwrap();
+        let store = VerifiedKvStore::new(data).unwrap();
 
         assert_eq!(store.len(), 3);
         assert!(!store.is_empty());
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_builder_pattern() {
-        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
+        let store: VerifiedKvStore<String> = VerifiedKvStoreBuilder::new()
             .insert("hello".to_string(), "world".to_string())
             .insert("foo".to_string(), "bar".to_string())
             .build()
@@ -105,10 +105,10 @@ mod tests {
 
     #[test]
     fn test_values_iterator() {
-        let store: VerifiedKvStore<i32, String> = VerifiedKvStoreBuilder::new()
-            .insert(1, "one".to_string())
-            .insert(2, "two".to_string())
-            .insert(3, "three".to_string())
+        let store: VerifiedKvStore<String> = VerifiedKvStoreBuilder::new()
+            .insert("1".to_string(), "one".to_string())
+            .insert("2".to_string(), "two".to_string())
+            .insert("3".to_string(), "three".to_string())
             .build()
             .unwrap();
 
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_serialization() {
-        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
+        let store: VerifiedKvStore<String> = VerifiedKvStoreBuilder::new()
             .insert("test".to_string(), "data".to_string())
             .insert("more".to_string(), "info".to_string())
             .build()
@@ -134,7 +134,7 @@ mod tests {
         assert!(store.save_to_file(test_file).is_ok());
 
         // Load should succeed
-        let loaded: VerifiedKvStore<String, String> =
+        let loaded: VerifiedKvStore<String> =
             VerifiedKvStore::load_from_file(test_file).unwrap();
 
         assert_eq!(loaded.len(), 2);
@@ -148,22 +148,22 @@ mod tests {
     fn test_large_dataset() {
         let mut data = HashMap::new();
         for i in 0..100 {
-            data.insert(i, format!("value_{}", i));
+            data.insert(format!("key_{}", i), format!("value_{}", i));
         }
 
-        // Using new() is correct here - keys are integers (i32), not Strings
+        // Using new() for String keys
         let store = VerifiedKvStore::new(data).unwrap();
         assert_eq!(store.len(), 100);
 
         // Verify all keys we inserted work correctly
         for i in 0..100 {
-            assert_eq!(store.get(&i).unwrap(), &format!("value_{}", i));
+            assert_eq!(store.get(&format!("key_{}", i)).unwrap(), &format!("value_{}", i));
         }
     }
 
     #[test]
     fn test_memory_usage() {
-        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
+        let store: VerifiedKvStore<String> = VerifiedKvStoreBuilder::new()
             .insert("test".to_string(), "data".to_string())
             .build()
             .unwrap();

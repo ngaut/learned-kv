@@ -26,7 +26,7 @@ fn analyze_key_size(key_len: usize) {
     }
 
     let keys: Vec<String> = data.keys().cloned().collect();
-    let store = VerifiedKvStore::new_string(data.clone()).unwrap();
+    let store = VerifiedKvStore::new(data.clone()).unwrap();
 
     let test_key = format!("{}{:010}", base, 500);
     let iterations = 10_000_000u128;

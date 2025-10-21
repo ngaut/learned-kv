@@ -1,5 +1,5 @@
 /// Ultra-strict verification: Test 15+ string patterns with 10,000+ keys each
-/// This ensures new_string() works reliably with ALL string patterns at scale
+/// This ensures new() works reliably with ALL string patterns at scale
 
 use learned_kv::VerifiedKvStore;
 use std::collections::HashMap;
@@ -14,8 +14,8 @@ fn test_pattern(pattern_name: &str, key_generator: impl Fn(usize) -> String, cou
         data.insert(key, value);
     }
 
-    // Use new_string() - the correct method for String keys
-    let store = match VerifiedKvStore::new_string(data.clone()) {
+    // Use new() - the correct method for String keys
+    let store = match VerifiedKvStore::new(data.clone()) {
         Ok(store) => store,
         Err(e) => {
             println!("❌ FAILED to construct: {:?}", e);
@@ -48,7 +48,7 @@ fn main() {
     println!("╔═══════════════════════════════════════════════════════╗");
     println!("║    ULTRA-STRICT VERIFICATION WITH LARGE KEY COUNTS    ║");
     println!("╚═══════════════════════════════════════════════════════╝\n");
-    println!("Testing new_string() with 15+ patterns × 10,000+ keys\n");
+    println!("Testing new() with 15+ patterns × 10,000+ keys\n");
 
     // Test 1: Sequential patterns that previously failed with FxHash
     println!("=== SEQUENTIAL PATTERNS (Previously Problematic) ===");
@@ -96,7 +96,7 @@ fn main() {
     for i in 0..50_000 {
         huge_data.insert(format!("huge_{}", i), format!("val_{}", i));
     }
-    match VerifiedKvStore::new_string(huge_data) {
+    match VerifiedKvStore::new(huge_data) {
         Ok(store) => {
             // Spot check some keys
             for i in (0..50_000).step_by(1000) {
@@ -121,5 +121,5 @@ fn main() {
     println!("✅ Total keys tested: 195,000+ keys");
     println!("✅ All lookups successful");
     println!("✅ No construction failures");
-    println!("\n🎯 new_string() is ROBUST and RELIABLE for all String patterns!");
+    println!("\n🎯 new() is ROBUST and RELIABLE for all String patterns!");
 }

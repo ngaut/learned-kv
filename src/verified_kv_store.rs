@@ -5,104 +5,63 @@
 
 use crate::error::KvError;
 use ptr_hash::bucket_fn::Linear;
-use ptr_hash::hash::{FastIntHash, KeyHasher, StringHash};
+use ptr_hash::hash::StringHash;
 use ptr_hash::{PtrHash, PtrHashParams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use std::path::Path;
 
 /// Safe key-value store that verifies every lookup.
 ///
-/// Features:
-/// - Keeps keys in memory for verification
-/// - Returns errors (not wrong values) for non-existent keys
-/// - Supports full serialization and persistence
-/// - Full API: iter(), keys(), values()
+/// Designed for String → Value mappings with:
+/// - O(1) lookups using Minimal Perfect Hash Functions (MPHF)
+/// - Key verification (returns errors for non-existent keys, never wrong values)
+/// - Full serialization and persistence support
+/// - Complete API: iter(), keys(), values(), contains_key()
+///
+/// Uses GxHash (AES-NI accelerated) for optimal string key distribution.
 ///
 /// Generic Parameters:
-/// - `K`: Key type (must be hashable)
-/// - `V`: Value type (must be cloneable)
-/// - `H`: Hash function (defaults to FastIntHash for integers)
+/// - `V`: Value type (must be cloneable and serializable)
 #[derive(Clone)]
-pub struct VerifiedKvStore<K, V, H = FastIntHash>
+pub struct VerifiedKvStore<V>
 where
-    K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
     V: Clone,
-    H: KeyHasher<K>,
 {
-    mphf: PtrHash<K, Linear, Vec<u32>, H, Vec<u8>>,
+    mphf: PtrHash<String, Linear, Vec<u32>, StringHash, Vec<u8>>,
     values: Vec<V>,
-    keys: Vec<K>, // Keep keys for verification
+    keys: Vec<String>, // Keep keys for verification
     len: usize,
-    _phantom: PhantomData<H>,
 }
 
-// Implementation for default hasher (integers and other types)
-impl<K, V> VerifiedKvStore<K, V, FastIntHash>
-where
-    K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
-    V: Clone,
-{
-    /// Create a new VerifiedKvStore from a HashMap with the default hasher (FastIntHash/FxHash).
-    ///
-    /// **Note**: This default hasher is optimized for integers and well-distributed keys.
-    /// For **String keys**, use `new_string()` instead, which uses GxHash and handles
-    /// sequential patterns much better (e.g., "key_0001", "key_0002", ...).
-    pub fn new(data: HashMap<K, V>) -> Result<Self, KvError> {
-        Self::new_with_hasher(data)
-    }
-}
-
-// Specialized implementation for String keys with better default hasher
-impl<V> VerifiedKvStore<String, V, StringHash>
+// Main implementation
+impl<V> VerifiedKvStore<V>
 where
     V: Clone,
 {
     /// Create a new VerifiedKvStore from a HashMap with String keys.
     ///
-    /// This uses GxHash (StringHash) which is specifically optimized for string keys.
-    /// FxHash (used by `new()`) has UNPREDICTABLE failures with string keys:
-    /// - `"key_0"`, `"key_1"`, ... works up to 2000+ keys
-    /// - `"user_0"`, `"user_1"`, ... fails at ~50-100 keys
-    /// - Failures depend on specific prefix bytes causing hash collisions
+    /// Uses GxHash (AES-NI accelerated) which provides excellent hash distribution
+    /// for all string patterns - sequential, random, UUID-style, etc.
     ///
-    /// **Recommended for ALL String keys** - prevents unpredictable construction failures.
-    pub fn new_string(data: HashMap<String, V>) -> Result<Self, KvError> {
-        Self::new_with_hasher(data)
-    }
-}
-
-// Implementation for all hashers
-impl<K, V, H> VerifiedKvStore<K, V, H>
-where
-    K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
-    V: Clone,
-    H: KeyHasher<K>,
-{
-    /// Create a new VerifiedKvStore with explicit hasher type.
+    /// # Example
+    /// ```
+    /// use learned_kv::VerifiedKvStore;
+    /// use std::collections::HashMap;
     ///
-    /// # ⚠️ IMPORTANT: Use `new_string()` for String Keys ⚠️
+    /// let mut data = HashMap::new();
+    /// data.insert("key1".to_string(), "value1".to_string());
+    /// data.insert("key2".to_string(), "value2".to_string());
+    /// let store = VerifiedKvStore::new(data).unwrap();
     ///
-    /// This method uses `H` as the hash function. The default hasher (`FastIntHash`/FxHash)
-    /// is optimized for **integers**, not strings. With string keys, FxHash has UNPREDICTABLE
-    /// failures depending on specific characters (e.g., `"user_"` prefix fails but `"key_"` works).
-    ///
-    /// **For String keys, use `new_string()` instead**, which uses GxHash (AES-NI accelerated)
-    /// and handles ALL string patterns reliably.
-    ///
-    /// **This method works well for:**
-    /// - Integer keys (u32, u64, i32, i64) up to ~1000 keys
-    /// - Hash-distributed keys
-    /// - Custom types with good hash distribution
-    ///
-    /// **For String keys:** Use `new_string()` to avoid unpredictable failures.
-    pub fn new_with_hasher(data: HashMap<K, V>) -> Result<Self, KvError> {
+    /// assert_eq!(store.get(&"key1".to_string()).unwrap(), "value1");
+    /// ```
+    pub fn new(data: HashMap<String, V>) -> Result<Self, KvError> {
         if data.is_empty() {
             return Err(KvError::EmptyKeySet);
         }
 
-        let keys: Vec<K> = data.keys().cloned().collect();
+        let keys: Vec<String> = data.keys().cloned().collect();
         let n = keys.len();
 
         let mphf = PtrHash::new(&keys, PtrHashParams::default());
@@ -117,7 +76,7 @@ where
         }
 
         // Allocate keys vector for verification
-        let mut key_array: Vec<K> = Vec::with_capacity(n);
+        let mut key_array: Vec<String> = Vec::with_capacity(n);
         // SAFETY: We're about to initialize all n elements via ptr::write
         // Clippy false positive: we DO initialize all elements via ptr::write below
         #[allow(clippy::uninit_vec)]
@@ -174,7 +133,6 @@ where
             values,
             keys: key_array,
             len: n,
-            _phantom: PhantomData,
         })
     }
 
@@ -185,7 +143,7 @@ where
     /// - Returns errors for non-existent keys
     /// - Uses MPHF for O(1) lookup time
     #[inline(always)]
-    pub fn get(&self, key: &K) -> Result<&V, KvError> {
+    pub fn get(&self, key: &String) -> Result<&V, KvError> {
         let index = self.mphf.index(key);
 
         // Must use safe indexing because we don't know if this is the right key
@@ -199,7 +157,7 @@ where
     }
 
     /// Lookup with detailed error messages.
-    pub fn get_detailed(&self, key: &K) -> Result<&V, KvError> {
+    pub fn get_detailed(&self, key: &String) -> Result<&V, KvError> {
         let index = self.mphf.index(key);
 
         if index < self.len && self.keys[index] == *key {
@@ -213,7 +171,7 @@ where
 
     /// Check if a key is in the store (accurate, no false positives).
     #[inline(always)]
-    pub fn contains_key(&self, key: &K) -> bool {
+    pub fn contains_key(&self, key: &String) -> bool {
         let index = self.mphf.index(key);
         index < self.len && self.keys[index] == *key
     }
@@ -229,7 +187,7 @@ where
     }
 
     /// Returns an iterator over all keys in the store.
-    pub fn keys(&self) -> impl Iterator<Item = &K> {
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
         self.keys.iter()
     }
 
@@ -239,7 +197,7 @@ where
     }
 
     /// Returns an iterator over all key-value pairs.
-    pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &V)> {
         self.keys.iter().zip(self.values.iter())
     }
 
@@ -258,24 +216,15 @@ where
     pub fn memory_usage_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
             + self.values.capacity() * std::mem::size_of::<V>()
-            + self.keys.capacity() * std::mem::size_of::<K>()
+            + self.keys.capacity() * std::mem::size_of::<String>()
         // Note: MPHF memory not included (requires mem_dbg feature)
     }
 }
 
 // Serialization support
-impl<K, V, H> VerifiedKvStore<K, V, H>
+impl<V> VerifiedKvStore<V>
 where
-    K: Clone
-        + std::hash::Hash
-        + Eq
-        + std::fmt::Debug
-        + Send
-        + Sync
-        + Serialize
-        + for<'de> Deserialize<'de>,
     V: Clone + Serialize + for<'de> Deserialize<'de>,
-    H: KeyHasher<K>,
 {
     /// Save the store to a file with integrity protection.
     ///
@@ -303,7 +252,9 @@ where
     /// ```no_run
     /// # use learned_kv::VerifiedKvStore;
     /// # use std::collections::HashMap;
-    /// # let store: VerifiedKvStore<String, i32> = VerifiedKvStore::new(HashMap::new()).unwrap();
+    /// # let mut data = HashMap::new();
+    /// # data.insert("key".to_string(), 42);
+    /// # let store = VerifiedKvStore::new(data).unwrap();
     /// store.save_to_file("data.bin")?;
     /// # Ok::<(), learned_kv::KvError>(())
     /// ```
@@ -363,7 +314,7 @@ where
             reordered_values.set_len(n);
         }
 
-        let mut reordered_keys: Vec<K> = Vec::with_capacity(n);
+        let mut reordered_keys: Vec<String> = Vec::with_capacity(n);
         #[allow(clippy::uninit_vec)]
         unsafe {
             reordered_keys.set_len(n);
@@ -385,38 +336,33 @@ where
             values: reordered_values,
             keys: reordered_keys,
             len: n,
-            _phantom: PhantomData,
         })
     }
 }
 
 /// Builder for constructing VerifiedKvStore instances.
-pub struct VerifiedKvStoreBuilder<K, V, H = FastIntHash> {
-    data: HashMap<K, V>,
-    _phantom: PhantomData<H>,
+pub struct VerifiedKvStoreBuilder<V> {
+    data: HashMap<String, V>,
 }
 
-impl<K, V, H> VerifiedKvStoreBuilder<K, V, H>
+impl<V> VerifiedKvStoreBuilder<V>
 where
-    K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
     V: Clone,
-    H: KeyHasher<K>,
 {
     pub fn new() -> Self {
         Self {
             data: HashMap::new(),
-            _phantom: PhantomData,
         }
     }
 
-    pub fn insert(mut self, key: K, value: V) -> Self {
+    pub fn insert(mut self, key: String, value: V) -> Self {
         self.data.insert(key, value);
         self
     }
 
     pub fn extend<I>(mut self, iter: I) -> Self
     where
-        I: IntoIterator<Item = (K, V)>,
+        I: IntoIterator<Item = (String, V)>,
     {
         self.data.extend(iter);
         self
@@ -424,24 +370,21 @@ where
 
     pub fn with_entries<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (K, V)>,
+        I: IntoIterator<Item = (String, V)>,
     {
         Self {
             data: HashMap::from_iter(iter),
-            _phantom: PhantomData,
         }
     }
 
-    pub fn build(self) -> Result<VerifiedKvStore<K, V, H>, KvError> {
-        VerifiedKvStore::new_with_hasher(self.data)
+    pub fn build(self) -> Result<VerifiedKvStore<V>, KvError> {
+        VerifiedKvStore::new(self.data)
     }
 }
 
-impl<K, V, H> Default for VerifiedKvStoreBuilder<K, V, H>
+impl<V> Default for VerifiedKvStoreBuilder<V>
 where
-    K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
     V: Clone,
-    H: KeyHasher<K>,
 {
     fn default() -> Self {
         Self::new()

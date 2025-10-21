@@ -20,7 +20,7 @@ fn lookup_benchmark(c: &mut Criterion) {
 
     // Test with 1000 keys
     let data = create_test_data(1000, 64);
-    let store = VerifiedKvStore::new_string(data.clone()).unwrap();
+    let store = VerifiedKvStore::new(data.clone()).unwrap();
     let test_key = format!("{}{}",  "a".repeat(54), "0000000500");
 
     group.bench_function("1k_keys_64_bytes", |b| {
@@ -37,7 +37,7 @@ fn key_length_benchmark(c: &mut Criterion) {
 
     for key_len in [64, 128, 256, 512, 1024, 2048].iter() {
         let data = create_test_data(1000, *key_len);
-        let store = VerifiedKvStore::new_string(data.clone()).unwrap();
+        let store = VerifiedKvStore::new(data.clone()).unwrap();
         let test_key = format!("{}{:010}", "a".repeat(key_len.saturating_sub(10)), 500);
 
         group.bench_with_input(
@@ -65,7 +65,7 @@ fn construction_benchmark(c: &mut Criterion) {
             size,
             |b, _size| {
                 b.iter(|| {
-                    black_box(VerifiedKvStore::new_string(black_box(data.clone())).unwrap())
+                    black_box(VerifiedKvStore::new(black_box(data.clone())).unwrap())
                 })
             },
         );
