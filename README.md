@@ -77,30 +77,26 @@ learned-kv = { path = "path/to/learned-kv" }
 // ✅ CORRECT: Use new_string() for String keys
 let store = VerifiedKvStore::new_string(data)?;
 
-// ❌ WRONG: new() uses FxHash, which fails with sequential strings
-let store = VerifiedKvStore::new(data)?;  // Panics with "key_0001", "key_0002", ...
+// ❌ WRONG: new() uses FxHash - UNPREDICTABLE failures with string keys
+let store = VerifiedKvStore::new(data)?;  // May panic depending on string content
 ```
 
 **Why:**
 - `new()` uses **FxHash** (optimized for integers, NOT strings)
-- `new_string()` uses **GxHash** (optimized for strings)
-- FxHash causes hash collisions with common string patterns
+- `new_string()` uses **GxHash** (optimized for strings, AES-NI accelerated)
+- FxHash behavior with strings is **UNPREDICTABLE** - depends on specific characters
 
-**Why `new()` (FxHash) fails for String keys:**
-- FxHash is optimized for **integers**, not strings
-- Sequential patterns: `"key_0001"`, `"key_0002"`, ... cause hash collisions
-- Short fixed prefixes: `"user_123"`, `"item_456"`, ... cause hash collisions
-- Note: FxHash works fine for integer keys like `0, 1, 2, ...` up to ~1000 keys
+**FxHash failures are UNPREDICTABLE:**
+- ✅ `"key_0"`, `"key_1"`, ... works up to 2000+ keys
+- ❌ `"user_0"`, `"user_1"`, ... fails at ~50-100 keys
+- ❌ `"item_0"`, `"item_1"`, ... fails at ~50-100 keys
+- ❌ Sequential integers `0, 1, 2, ...` fails at ~1000 keys with FxHash
+- **Failure depends on hash collisions with specific prefix bytes**
 
-**What works with `new_string()` (GxHash):**
-- ✅ **ALL string patterns** including sequential: `"key_0001"`, `"key_0002"`, ...
-- ✅ Short prefixes, long prefixes, any pattern
-- ✅ Tested up to 10,000+ sequential keys
-
-**What works with `new()` (FxHash):**
-- ✅ Well-distributed integer keys
-- ✅ Hash-based integers: `i * prime`
-- ✅ Random/UUID keys (but use `new_string()` for strings anyway)
+**Solution: Always use the correct hash function:**
+- ✅ **String keys** → use `new_string()` (GxHash) - handles ALL patterns reliably
+- ✅ **Integer keys** → use `new()` (FxHash) - works well up to ~1000 keys
+- ✅ **Large integer datasets (>1000)** → use GxHash or well-distributed keys
 
 ### 2. Slow Load Times
 

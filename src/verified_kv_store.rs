@@ -61,12 +61,13 @@ where
 {
     /// Create a new VerifiedKvStore from a HashMap with String keys.
     ///
-    /// This uses GxHash (StringHash) which is specifically optimized for string keys
-    /// and handles sequential patterns like "key_0001", "key_0002", ... much better
-    /// than the default FxHash.
+    /// This uses GxHash (StringHash) which is specifically optimized for string keys.
+    /// FxHash (used by `new()`) has UNPREDICTABLE failures with string keys:
+    /// - `"key_0"`, `"key_1"`, ... works up to 2000+ keys
+    /// - `"user_0"`, `"user_1"`, ... fails at ~50-100 keys
+    /// - Failures depend on specific prefix bytes causing hash collisions
     ///
-    /// **Recommended for all String keys** - prevents construction failures with
-    /// sequential or similar-prefix patterns.
+    /// **Recommended for ALL String keys** - prevents unpredictable construction failures.
     pub fn new_string(data: HashMap<String, V>) -> Result<Self, KvError> {
         Self::new_with_hasher(data)
     }
@@ -84,17 +85,18 @@ where
     /// # ⚠️ IMPORTANT: Use `new_string()` for String Keys ⚠️
     ///
     /// This method uses `H` as the hash function. The default hasher (`FastIntHash`/FxHash)
-    /// is optimized for **integers**, not strings.
+    /// is optimized for **integers**, not strings. With string keys, FxHash has UNPREDICTABLE
+    /// failures depending on specific characters (e.g., `"user_"` prefix fails but `"key_"` works).
     ///
-    /// **For String keys, use `new_string()` instead**, which uses GxHash and handles
-    /// all string patterns including sequential ones like "key_0001", "key_0002", etc.
+    /// **For String keys, use `new_string()` instead**, which uses GxHash (AES-NI accelerated)
+    /// and handles ALL string patterns reliably.
     ///
     /// **This method works well for:**
-    /// - Integer keys (u32, u64, i32, i64)
+    /// - Integer keys (u32, u64, i32, i64) up to ~1000 keys
     /// - Hash-distributed keys
     /// - Custom types with good hash distribution
     ///
-    /// **For String keys:** Use `new_string()` for correct hash function selection.
+    /// **For String keys:** Use `new_string()` to avoid unpredictable failures.
     pub fn new_with_hasher(data: HashMap<K, V>) -> Result<Self, KvError> {
         if data.is_empty() {
             return Err(KvError::EmptyKeySet);
