@@ -71,14 +71,22 @@ learned-kv = { path = "path/to/learned-kv" }
 
 ### 1. MPHF Construction Can Fail
 
-Construction may panic for certain key patterns:
-- ❌ Sequential patterns: `"key_0001"`, `"key_0002"`, ... or `0, 1, 2, ...`
-- ❌ Large datasets (>10K keys) with poorly distributed hashes
-- ✅ UUID-style strings: `"key-a3f2-8b1c"`, ...
-- ✅ Well-distributed hash-based keys
-- ✅ Integer keys with good distribution
+Construction may **panic** for certain key patterns (hash collisions):
 
-**Recommendation:** Use UUID-style or hash-based keys for reliability.
+**Patterns that FAIL:**
+- ❌ Sequential integers: `0, 1, 2, ...` (fails at ~1000 keys)
+- ❌ Short fixed prefix + sequential suffix: `"key_0001"`, `"key_0002"`, ... (fails at ~100 keys)
+- ❌ Any pattern with identical prefix bytes (hash collisions)
+
+**Patterns that WORK:**
+- ✅ Long variable prefix + sequential suffix: `"aaaaaa...0000000001"` (used in benchmarks)
+- ✅ Hash-distributed integers: `i * prime_number`
+- ✅ Random/UUID-style strings: `"key-a3f2-8b1c"`, ...
+- ✅ Well-distributed keys (variation in early bytes)
+
+**Why:** The hash function (FxHash) processes early bytes first. Keys with identical prefixes cause hash collisions.
+
+**Recommendation:** Ensure keys have variation in their first ~8 bytes. Use UUIDs, hashes, or long variable prefixes.
 
 ### 2. Slow Load Times
 
