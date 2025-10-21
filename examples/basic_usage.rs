@@ -13,6 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     data.insert("orange".to_string(), 2.00);
     data.insert("grape".to_string(), 3.25);
 
+    // Note: Using new() is fine for numeric keys (f64)
     let store = VerifiedKvStore::new(data)?;
     println!("Store created with {} items", store.len());
 
@@ -37,7 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_data.insert("blue".to_string(), "#0000FF".to_string());
     color_data.insert("yellow".to_string(), "#FFFF00".to_string());
 
-    let colors = VerifiedKvStore::new(color_data)?;
+    // Use new_string() for String keys to avoid construction failures
+    let colors = VerifiedKvStore::new_string(color_data)?;
 
     println!("Color store created with {} items", colors.len());
 

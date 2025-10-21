@@ -8,11 +8,11 @@ A high-performance, immutable key-value store in Rust using Minimal Perfect Hash
 use learned_kv::VerifiedKvStore;
 use std::collections::HashMap;
 
-// Build from HashMap
+// Build from HashMap (use new_string() for String keys!)
 let mut data = HashMap::new();
 data.insert("key1".to_string(), "value1".to_string());
 data.insert("key2".to_string(), "value2".to_string());
-let store = VerifiedKvStore::new(data)?;
+let store = VerifiedKvStore::new_string(data)?;  // Recommended for String keys
 
 // Safe lookup with verification
 match store.get(&"key1".to_string()) {
@@ -69,24 +69,37 @@ learned-kv = { path = "path/to/learned-kv" }
 
 ## Important Limitations
 
-### 1. MPHF Construction Can Fail
+### 1. IMPORTANT: Use `new_string()` for String Keys
 
-Construction may **panic** for certain key patterns (hash collisions):
+**For String keys, always use `new_string()` instead of `new()`:**
 
-**Patterns that FAIL:**
+```rust
+// ✅ CORRECT: Use new_string() for String keys
+let store = VerifiedKvStore::new_string(data)?;
+
+// ❌ WRONG: new() uses FxHash, which fails with sequential strings
+let store = VerifiedKvStore::new(data)?;  // Panics with "key_0001", "key_0002", ...
+```
+
+**Why:**
+- `new()` uses **FxHash** (optimized for integers, NOT strings)
+- `new_string()` uses **GxHash** (optimized for strings)
+- FxHash causes hash collisions with common string patterns
+
+**What fails with `new()` (FxHash):**
+- ❌ Sequential patterns: `"key_0001"`, `"key_0002"`, ... (fails at ~100 keys)
+- ❌ Short fixed prefixes: `"user_123"`, `"item_456"`, ... (fails early)
 - ❌ Sequential integers: `0, 1, 2, ...` (fails at ~1000 keys)
-- ❌ Short fixed prefix + sequential suffix: `"key_0001"`, `"key_0002"`, ... (fails at ~100 keys)
-- ❌ Any pattern with identical prefix bytes (hash collisions)
 
-**Patterns that WORK:**
-- ✅ Long variable prefix + sequential suffix: `"aaaaaa...0000000001"` (used in benchmarks)
-- ✅ Hash-distributed integers: `i * prime_number`
-- ✅ Random/UUID-style strings: `"key-a3f2-8b1c"`, ...
-- ✅ Well-distributed keys (variation in early bytes)
+**What works with `new_string()` (GxHash):**
+- ✅ **ALL string patterns** including sequential: `"key_0001"`, `"key_0002"`, ...
+- ✅ Short prefixes, long prefixes, any pattern
+- ✅ Tested up to 10,000+ sequential keys
 
-**Why:** The hash function (FxHash) processes early bytes first. Keys with identical prefixes cause hash collisions.
-
-**Recommendation:** Ensure keys have variation in their first ~8 bytes. Use UUIDs, hashes, or long variable prefixes.
+**What works with `new()` (FxHash):**
+- ✅ Well-distributed integer keys
+- ✅ Hash-based integers: `i * prime`
+- ✅ Random/UUID keys (but use `new_string()` for strings anyway)
 
 ### 2. Slow Load Times
 

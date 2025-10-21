@@ -5,7 +5,7 @@
 
 use crate::error::KvError;
 use ptr_hash::bucket_fn::Linear;
-use ptr_hash::hash::{FastIntHash, KeyHasher};
+use ptr_hash::hash::{FastIntHash, KeyHasher, StringHash};
 use ptr_hash::{PtrHash, PtrHashParams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -38,14 +38,36 @@ where
     _phantom: PhantomData<H>,
 }
 
-// Implementation for default hasher
+// Implementation for default hasher (integers and other types)
 impl<K, V> VerifiedKvStore<K, V, FastIntHash>
 where
     K: Clone + std::hash::Hash + Eq + std::fmt::Debug + Send + Sync,
     V: Clone,
 {
-    /// Create a new VerifiedKvStore from a HashMap with the default hasher.
+    /// Create a new VerifiedKvStore from a HashMap with the default hasher (FastIntHash/FxHash).
+    ///
+    /// **Note**: This default hasher is optimized for integers and well-distributed keys.
+    /// For **String keys**, use `new_string()` instead, which uses GxHash and handles
+    /// sequential patterns much better (e.g., "key_0001", "key_0002", ...).
     pub fn new(data: HashMap<K, V>) -> Result<Self, KvError> {
+        Self::new_with_hasher(data)
+    }
+}
+
+// Specialized implementation for String keys with better default hasher
+impl<V> VerifiedKvStore<String, V, StringHash>
+where
+    V: Clone,
+{
+    /// Create a new VerifiedKvStore from a HashMap with String keys.
+    ///
+    /// This uses GxHash (StringHash) which is specifically optimized for string keys
+    /// and handles sequential patterns like "key_0001", "key_0002", ... much better
+    /// than the default FxHash.
+    ///
+    /// **Recommended for all String keys** - prevents construction failures with
+    /// sequential or similar-prefix patterns.
+    pub fn new_string(data: HashMap<String, V>) -> Result<Self, KvError> {
         Self::new_with_hasher(data)
     }
 }
