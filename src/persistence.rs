@@ -1,4 +1,4 @@
-//! Robust persistence layer for LearnedKvStore
+//! Robust persistence layer for VerifiedKvStore
 //!
 //! Features:
 //! - Format versioning for safe evolution

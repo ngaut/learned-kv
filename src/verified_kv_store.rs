@@ -14,11 +14,11 @@ use std::path::Path;
 
 /// Safe key-value store that verifies every lookup.
 ///
-/// Unlike `LearnedKvStore`, this variant:
+/// Features:
 /// - Keeps keys in memory for verification
 /// - Returns errors (not wrong values) for non-existent keys
-/// - Supports full serialization
-/// - Uses more memory (~2x key storage)
+/// - Supports full serialization and persistence
+/// - Full API: iter(), keys(), values()
 ///
 /// Generic Parameters:
 /// - `K`: Key type (must be hashable)
@@ -160,10 +160,10 @@ where
 
     /// Fast lookup with key verification.
     ///
-    /// Unlike `LearnedKvStore::get()`, this method:
-    /// - Verifies the key matches
-    /// - Returns errors for non-existent keys (no false matches)
-    /// - Slightly slower due to key comparison
+    /// This method:
+    /// - Verifies the key matches (safe, no wrong values)
+    /// - Returns errors for non-existent keys
+    /// - Uses MPHF for O(1) lookup time
     #[inline(always)]
     pub fn get(&self, key: &K) -> Result<&V, KvError> {
         let index = self.mphf.index(key);
@@ -231,8 +231,8 @@ where
     /// - Does NOT include MPHF internal structures (~2-4 bits per key)
     ///
     /// **Use for:**
-    /// - Comparing VerifiedKvStore vs LearnedKvStore (ratio should be ~2.0x)
     /// - Relative memory comparisons between datasets
+    /// - Understanding storage overhead
     ///
     /// **For accurate total memory:** Use external profiler or add heap data separately
     pub fn memory_usage_bytes(&self) -> usize {

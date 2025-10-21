@@ -1,4 +1,4 @@
-# LearnedKvStore
+# VerifiedKvStore
 
 A high-performance key-value store implementation in Rust using Minimal Perfect Hash Functions (MPHF) based on the [PtrHash algorithm](https://github.com/RagnarGrootKoerkamp/ptrhash).
 
@@ -16,27 +16,22 @@ A high-performance key-value store implementation in Rust using Minimal Perfect 
    - 1K keys: ~1-5ms | 100K keys: ~50-100ms | 1M keys: ~500ms-1s | 10M keys: ~5-10s
    - **Not suitable** for applications requiring fast startup or frequent reloads
 
-3. **LearnedKvStore Returns WRONG VALUES**
-   - Querying non-existent keys may return arbitrary values from the store
-   - Silent data corruption - no error returned
-   - **Use VerifiedKvStore instead** unless you have strict memory constraints
-
 **Use Cases:**
 - ✅ Static datasets loaded once at startup
 - ✅ UUID-style strings or well-distributed hash-based keys
-- ✅ Memory-constrained environments (with VerifiedKvStore)
+- ✅ Memory-constrained environments
 - ❌ Frequently reloaded data
 - ❌ Sequential patterns (strings or integers like 0, 1, 2...)
-- ❌ Untrusted or arbitrary queries (use VerifiedKvStore)
 
 ## Features
 
 - **O(1) lookup time** with minimal perfect hash functions
-- **Memory efficient** - optimized storage with minimal overhead
+- **Safe key verification** - returns errors for non-existent keys, never wrong values
 - **Type-safe** - generic over any key and value types that implement required traits
 - **Serializable** - save and load stores to/from disk using bincode
 - **Performance optimized** - zero-allocation lookups for hot paths
 - **Bug-fixed** - patched PtrHash implementation fixes mathematical instability for small datasets
+- **Full API** - iter(), keys(), values() support
 
 ## Performance Characteristics
 
@@ -60,37 +55,30 @@ Based on comprehensive benchmarking with optimized release builds and CPU-specif
 
 ## Quick Start
 
-**Two variants available:**
-- **`VerifiedKvStore`** (recommended): Safe variant with key verification, full API
-- **`LearnedKvStore`**: Memory-optimized variant, no key verification (may return wrong values for non-existent keys)
-
 ```rust
-use learned_kv::{VerifiedKvStore, LearnedKvStore};
+use learned_kv::VerifiedKvStore;
 use std::collections::HashMap;
 
-// Build VerifiedKvStore from HashMap (recommended for most use cases)
+// Build from HashMap
 let mut data = HashMap::new();
 data.insert("key1".to_string(), "value1".to_string());
 data.insert("key2".to_string(), "value2".to_string());
 let store = VerifiedKvStore::new(data)?;
 
-// Fast lookup with verification
+// Safe lookup with verification
 match store.get(&"key1".to_string()) {
     Ok(value) => println!("Found: {}", value),
     Err(_) => println!("Not found"),
 }
 
-// VerifiedKvStore supports full API
+// Full API support
 for (key, value) in store.iter() {
     println!("{}: {}", key, value);
 }
 
-// LearnedKvStore for maximum performance (expert users only)
-// WARNING: May return wrong values for non-existent keys!
-let mut data2 = HashMap::new();
-data2.insert("key3".to_string(), "value3".to_string());
-let fast_store = LearnedKvStore::new(data2)?;
-let value = fast_store.get(&"key3".to_string())?; // Only query existing keys!
+// Serialization
+store.save_to_file("data.bin")?;
+let loaded = VerifiedKvStore::load_from_file("data.bin")?;
 ```
 
 ## Installation
@@ -132,28 +120,12 @@ panic = "abort"
 
 These optimizations provide:
 - **26-83% performance improvement** over debug builds
-- **Additional 20-25% improvement** over generic release builds  
+- **Additional 20-25% improvement** over generic release builds
 - Better instruction selection for AES operations (GxHash acceleration)
 - Improved vectorization and memory access patterns
 - Smaller binary size with `panic = "abort"`
 
-## Benchmarks
-
-Run comprehensive benchmarks using Criterion:
-
-```bash
-# All benchmarks (automatically uses CPU optimizations)
-cargo bench
-
-# Specific benchmark groups
-cargo bench key_length_impact
-cargo bench lookup_performance
-cargo bench construction_performance
-```
-
 ## API Methods
-
-### VerifiedKvStore (Recommended)
 
 **Core Operations:**
 - `new(data: HashMap<K, V>)` - Create from HashMap
@@ -171,26 +143,6 @@ cargo bench construction_performance
 **Persistence:**
 - `save_to_file(path)` - Serialize to disk
 - `load_from_file(path)` - Deserialize from disk
-
-**Analysis:**
-- `memory_usage_bytes()` - Get memory consumption
-
-### LearnedKvStore (Expert Users Only)
-
-**Core Operations:**
-- `new(data: HashMap<K, V>)` - Create from HashMap
-- `get(&key)` - ⚠️ **WARNING:** May return wrong value for non-existent keys!
-- `get_detailed(&key)` - Lookup with detailed error messages
-- `contains_key(&key)` - ⚠️ Approximate check (may have false positives)
-- `len()` - Number of key-value pairs
-- `is_empty()` - Check if store is empty
-
-**Iteration:**
-- `values()` - Iterate over values only (keys not stored)
-- ⚠️ `iter()` and `keys()` **NOT AVAILABLE** (no key storage)
-
-**Persistence:**
-- ⚠️ `save_to_file()` and `load_from_file()` **NOT SUPPORTED** (returns error)
 
 **Analysis:**
 - `memory_usage_bytes()` - Get memory consumption
@@ -219,49 +171,36 @@ This library uses a patched version of the PtrHash algorithm that fixes mathemat
 learned-kv/
 ├── src/
 │   ├── lib.rs                 # Main library interface
-│   ├── kv_store.rs            # LearnedKvStore (optimized variant)
-│   ├── verified_kv_store.rs   # VerifiedKvStore (safe variant)
+│   ├── verified_kv_store.rs   # VerifiedKvStore implementation
+│   ├── persistence.rs         # Persistence layer
 │   ├── error.rs               # Error types
 │   └── main.rs                # Demo binary
-├── benches/
-│   ├── kv_store_bench.rs      # Criterion benchmarks
-│   └── key_length_benchmark.rs # Key length performance analysis
 ├── examples/
 │   ├── basic_usage.rs         # Usage examples
 │   └── cache_analysis.rs      # Performance analysis tool
-├── tests/
-│   └── integration_tests.rs   # Comprehensive integration tests
 └── ptr_hash_patched/          # Patched PtrHash dependency
 ```
 
 ## Key Improvements Over Original
 
 1. **Mathematical Overflow Fix**: Patched ptr_hash to handle edge cases in MPHF construction
-2. **Performance Optimizations**: 
+2. **Performance Optimizations**:
    - Zero-allocation error paths for hot lookups
    - CPU-specific build optimizations (26-83% faster)
    - Hardware-accelerated hashing with GxHash AES instructions
-3. **Comprehensive Benchmarking**: Criterion-based benchmarks with statistical analysis
-4. **Better Small Dataset Handling**: Forced single-part construction for <10K keys
-5. **Optimized Build System**: Automatic CPU-specific optimizations and LTO
+3. **Better Small Dataset Handling**: Forced single-part construction for <10K keys
+4. **Optimized Build System**: Automatic CPU-specific optimizations and LTO
 
-## Which Variant Should I Use?
+## When to Use
 
-### Use VerifiedKvStore (Recommended) When:
+### Use VerifiedKvStore When:
 ✅ Queries may include non-existent keys
 ✅ Safety and correctness are important
 ✅ Need full API (iter, keys, serialization)
 ✅ Need accurate `contains_key()` checks
 ✅ **Confidence:** High (9/10) - production ready
 
-### Use LearnedKvStore (Expert Users Only) When:
-✅ Memory is extremely constrained (saves key storage, ~30-50% depending on key/value ratio)
-✅ ALL queries are guaranteed to be for existing keys only
-✅ You fully understand the risks of wrong values
-✅ Internal tools / expert-only access
-⚠️ **Confidence:** Medium (7/10) - use with caution
-
-### Don't Use Either When:
+### Don't Use When:
 ❌ Need mutable data (use HashMap or BTreeMap instead)
 ❌ Have sequential patterns: `"key_0001"`, `"key_0002"` OR `0, 1, 2, ...` (MPHF construction often fails)
 ❌ Need incremental updates (requires full rebuild)
@@ -287,7 +226,6 @@ Ideal for:
 Contributions are welcome! Please ensure:
 - All tests pass: `cargo test`
 - Code follows Rust conventions: `cargo clippy`
-- Benchmarks show no regression: `cargo bench`
 
 ## License
 
@@ -296,5 +234,4 @@ This project is MIT licensed. The original PtrHash library is by Ragnar Groot Ko
 ## Acknowledgments
 
 - Based on the [PtrHash algorithm](https://github.com/RagnarGrootKoerkamp/ptrhash) by Ragnar Groot Koerkamp
-- Performance analysis conducted using Criterion.rs benchmarking framework
 - Mathematical stability fixes applied to handle edge cases

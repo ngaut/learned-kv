@@ -4,7 +4,6 @@ use std::collections::HashMap;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Learned Key-Value Store Demo");
     println!("==========================");
-    println!("Using VerifiedKvStore (safe variant with key verification)");
     println!("Using UUID-STYLE STRING KEYS (best practice for strings)\n");
 
     // Using UUID-style string keys - best practice for reliable MPHF construction
@@ -43,9 +42,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  {}: {}", key, value);
     }
 
-    println!("\nNote: VerifiedKvStore supports full API (iter, keys, serialization)");
-    println!("For maximum performance without key verification, use LearnedKvStore");
-    println!("(WARNING: LearnedKvStore may return wrong values for non-existent keys)");
+    println!("\nVerifiedKvStore supports:");
+    println!("  - Safe key verification (no wrong values)");
+    println!("  - Full API (iter, keys, serialization)");
+    println!("  - UUID-style string keys for reliable MPHF construction");
 
     Ok(())
 }

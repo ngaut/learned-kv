@@ -1,4 +1,4 @@
-//! # LearnedKvStore
+//! # VerifiedKvStore
 //!
 //! A high-performance key-value store implementation using Minimal Perfect Hash Functions (MPHF).
 //!
@@ -7,7 +7,7 @@
 //! Based on comprehensive benchmarking with optimized release builds:
 //! - **Small keys (≤64 bytes)**: ~3-6ns lookups
 //! - **Medium keys (128-512 bytes)**: ~10-57ns lookups
-//! - **Large keys (1KB-4KB)**: ~146-639ns lookups (hash computation dominates)
+//! - **Large keys (1KB-2KB)**: ~107-248ns lookups (hash computation dominates)
 //!
 //! **Performance bottlenecks:**
 //! - Hash computation: 95% of lookup time for large keys
@@ -19,16 +19,15 @@
 //! 1. **Use shorter keys** when possible - performance scales linearly with key length
 //! 2. **Use `get()` instead of `get_detailed()`** for hot paths (avoids string allocation)
 //! 3. **Consider key design** - hash-based or numeric keys perform better than long strings
+//! 4. **Use UUID-style strings** for reliable MPHF construction (avoid sequential patterns)
 //!
 //! ## Example Usage
-//!
-//! **Recommended**: Use `VerifiedKvStore` for safe key verification:
 //!
 //! ```rust
 //! use learned_kv::VerifiedKvStore;
 //! use std::collections::HashMap;
 //!
-//! // Build from HashMap (safe variant recommended)
+//! // Build from HashMap
 //! let mut data = HashMap::new();
 //! data.insert("key1".to_string(), "value1".to_string());
 //! data.insert("key2".to_string(), "value2".to_string());
@@ -39,20 +38,25 @@
 //!     Ok(value) => println!("Found: {}", value),
 //!     Err(_) => println!("Not found"),
 //! }
-//! ```
 //!
-//! **For expert users only**: `LearnedKvStore` offers maximum performance but may
-//! return wrong values for non-existent keys. See documentation for warnings.
+//! // Full API support
+//! for (key, value) in store.iter() {
+//!     println!("{}: {}", key, value);
+//! }
+//!
+//! // Serialization support
+//! store.save_to_file("data.bin").unwrap();
+//! let loaded: VerifiedKvStore<String, String> = VerifiedKvStore::load_from_file("data.bin").unwrap();
+//! # std::fs::remove_file("data.bin").ok();
+//! ```
 
 pub mod error;
-pub mod kv_store;
 pub mod verified_kv_store;
 
 // Persistence is internal implementation detail
 mod persistence;
 
 pub use error::KvError;
-pub use kv_store::{KvStoreBuilder, LearnedKvStore};
 pub use verified_kv_store::{VerifiedKvStore, VerifiedKvStoreBuilder};
 
 #[cfg(test)]
@@ -67,7 +71,7 @@ mod tests {
         data.insert("key2".to_string(), "value2".to_string());
         data.insert("key3".to_string(), "value3".to_string());
 
-        let store: LearnedKvStore<String, String> = LearnedKvStore::new(data).unwrap();
+        let store = VerifiedKvStore::new(data).unwrap();
 
         assert_eq!(store.len(), 3);
         assert!(!store.is_empty());
@@ -76,20 +80,20 @@ mod tests {
         assert_eq!(store.get(&"key2".to_string()).unwrap(), "value2");
         assert_eq!(store.get(&"key3".to_string()).unwrap(), "value3");
 
-        // Note: contains_key may have false positives in optimized mode
         assert!(store.contains_key(&"key1".to_string()));
+        assert!(!store.contains_key(&"nonexistent".to_string()));
     }
 
     #[test]
     fn test_empty_store() {
         let empty_data: HashMap<String, String> = HashMap::new();
-        let result: Result<LearnedKvStore<String, String>, _> = LearnedKvStore::new(empty_data);
+        let result = VerifiedKvStore::new(empty_data);
         assert!(matches!(result, Err(KvError::EmptyKeySet)));
     }
 
     #[test]
     fn test_builder_pattern() {
-        let store: LearnedKvStore<String, String> = KvStoreBuilder::new()
+        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
             .insert("hello".to_string(), "world".to_string())
             .insert("foo".to_string(), "bar".to_string())
             .build()
@@ -102,14 +106,13 @@ mod tests {
 
     #[test]
     fn test_values_iterator() {
-        let store: LearnedKvStore<i32, String> = KvStoreBuilder::new()
+        let store: VerifiedKvStore<i32, String> = VerifiedKvStoreBuilder::new()
             .insert(1, "one".to_string())
             .insert(2, "two".to_string())
             .insert(3, "three".to_string())
             .build()
             .unwrap();
 
-        // Only values() available in optimized mode
         let values: Vec<_> = store.values().cloned().collect();
 
         assert_eq!(values.len(), 3);
@@ -119,18 +122,27 @@ mod tests {
     }
 
     #[test]
-    fn test_serialization_disabled() {
-        let store: LearnedKvStore<String, String> = KvStoreBuilder::new()
+    fn test_serialization() {
+        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
             .insert("test".to_string(), "data".to_string())
             .insert("more".to_string(), "info".to_string())
             .build()
             .unwrap();
 
-        // Serialization is disabled in optimized mode
-        assert!(store.save_to_file("test_serialization.bin").is_err());
-        assert!(
-            LearnedKvStore::<String, String>::load_from_file("test_serialization.bin").is_err()
-        );
+        let test_file = "/tmp/test_verified_serialization.bin";
+
+        // Save should succeed
+        assert!(store.save_to_file(test_file).is_ok());
+
+        // Load should succeed
+        let loaded: VerifiedKvStore<String, String> =
+            VerifiedKvStore::load_from_file(test_file).unwrap();
+
+        assert_eq!(loaded.len(), 2);
+        assert_eq!(loaded.get(&"test".to_string()).unwrap(), "data");
+
+        // Cleanup
+        std::fs::remove_file(test_file).ok();
     }
 
     #[test]
@@ -140,7 +152,7 @@ mod tests {
             data.insert(i, format!("value_{}", i));
         }
 
-        let store: LearnedKvStore<i32, String> = LearnedKvStore::new(data).unwrap();
+        let store = VerifiedKvStore::new(data).unwrap();
         assert_eq!(store.len(), 100);
 
         // Verify all keys we inserted work correctly
@@ -151,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_memory_usage() {
-        let store: LearnedKvStore<String, String> = KvStoreBuilder::new()
+        let store: VerifiedKvStore<String, String> = VerifiedKvStoreBuilder::new()
             .insert("test".to_string(), "data".to_string())
             .build()
             .unwrap();
