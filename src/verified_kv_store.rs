@@ -21,7 +21,7 @@ use std::path::Path;
 ///
 /// Uses GxHash (AES-NI accelerated) for optimal string key distribution.
 ///
-/// Generic Parameters:
+/// # Type Parameter
 /// - `V`: Value type (must be cloneable and serializable)
 #[derive(Clone)]
 pub struct VerifiedKvStore<V>

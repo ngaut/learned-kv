@@ -122,8 +122,8 @@ is_empty() -> bool
 
 ### Iteration
 ```rust
-iter() -> impl Iterator<Item = (&K, &V)>
-keys() -> impl Iterator<Item = &K>
+iter() -> impl Iterator<Item = (&String, &V)>
+keys() -> impl Iterator<Item = &String>
 values() -> impl Iterator<Item = &V>
 ```
 
