@@ -129,8 +129,7 @@ mod tests {
         assert!(store.save_to_file(test_file).is_ok());
 
         // Load should succeed
-        let loaded: VerifiedKvStore<String> =
-            VerifiedKvStore::load_from_file(test_file).unwrap();
+        let loaded: VerifiedKvStore<String> = VerifiedKvStore::load_from_file(test_file).unwrap();
 
         assert_eq!(loaded.len(), 2);
         assert_eq!(loaded.get(&"test".to_string()).unwrap(), "data");
@@ -152,7 +151,10 @@ mod tests {
 
         // Verify all keys we inserted work correctly
         for i in 0..100 {
-            assert_eq!(store.get(&format!("key_{}", i)).unwrap(), &format!("value_{}", i));
+            assert_eq!(
+                store.get(&format!("key_{}", i)).unwrap(),
+                &format!("value_{}", i)
+            );
         }
     }
 

@@ -22,11 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store = VerifiedKvStore::new(data)?;
     let all_keys: Vec<String> = store.keys().cloned().collect();
 
-    println!(
-        "Dataset: {} keys of {} bytes each",
-        all_keys.len(),
-        key_len
-    );
+    println!("Dataset: {} keys of {} bytes each", all_keys.len(), key_len);
 
     // Test 1: Same key repeated lookups (should show caching effects)
     println!("\nTest 1: Same Key Repeated Lookups (Cache Test)");

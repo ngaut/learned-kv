@@ -53,8 +53,8 @@ fn analyze_key_size(key_len: usize) {
     let key_compare_ns = start.elapsed().as_nanos() / iterations;
 
     // 3. Hash computation (using std::hash)
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     let start = Instant::now();
     for _ in 0..iterations {
         let mut hasher = DefaultHasher::new();
@@ -79,22 +79,38 @@ fn analyze_key_size(key_len: usize) {
     let mphf_and_hash = full_get_ns.saturating_sub(measured_overhead);
 
     println!("  Total get() time:        {:>6} ns (100.0%)", full_get_ns);
-    println!("  ├─ Key comparison:       {:>6} ns ({:>5.1}%)",
-             key_compare_ns, (key_compare_ns as f64 / full_get_ns as f64) * 100.0);
-    println!("  ├─ Array access:         {:>6} ns ({:>5.1}%)",
-             array_access_ns, (array_access_ns as f64 / full_get_ns as f64) * 100.0);
-    println!("  ├─ Hash+MPHF (inferred): {:>6} ns ({:>5.1}%)",
-             mphf_and_hash, (mphf_and_hash as f64 / full_get_ns as f64) * 100.0);
-    println!("  └─ Ref: std::hash:       {:>6} ns (for comparison)", hash_ns);
+    println!(
+        "  ├─ Key comparison:       {:>6} ns ({:>5.1}%)",
+        key_compare_ns,
+        (key_compare_ns as f64 / full_get_ns as f64) * 100.0
+    );
+    println!(
+        "  ├─ Array access:         {:>6} ns ({:>5.1}%)",
+        array_access_ns,
+        (array_access_ns as f64 / full_get_ns as f64) * 100.0
+    );
+    println!(
+        "  ├─ Hash+MPHF (inferred): {:>6} ns ({:>5.1}%)",
+        mphf_and_hash,
+        (mphf_and_hash as f64 / full_get_ns as f64) * 100.0
+    );
+    println!(
+        "  └─ Ref: std::hash:       {:>6} ns (for comparison)",
+        hash_ns
+    );
 
     // Identify bottleneck
     if mphf_and_hash > full_get_ns / 2 {
-        println!("  🔴 BOTTLENECK: Hashing + MPHF index ({:.1}%)",
-                 (mphf_and_hash as f64 / full_get_ns as f64) * 100.0);
+        println!(
+            "  🔴 BOTTLENECK: Hashing + MPHF index ({:.1}%)",
+            (mphf_and_hash as f64 / full_get_ns as f64) * 100.0
+        );
         println!("     → Optimize hash function or reduce key size");
     } else if key_compare_ns > full_get_ns / 2 {
-        println!("  🔴 BOTTLENECK: Key comparison ({:.1}%)",
-                 (key_compare_ns as f64 / full_get_ns as f64) * 100.0);
+        println!(
+            "  🔴 BOTTLENECK: Key comparison ({:.1}%)",
+            (key_compare_ns as f64 / full_get_ns as f64) * 100.0
+        );
         println!("     → Consider storing hash prefixes for early rejection");
     } else {
         println!("  ✓  Well-distributed - no single dominant bottleneck");
@@ -102,7 +118,9 @@ fn analyze_key_size(key_len: usize) {
 
     // Performance metrics
     let ns_per_byte = full_get_ns as f64 / key_len as f64;
-    println!("  📊 {:.3} ns/byte | {:.1}% overhead vs key comparison alone",
-             ns_per_byte,
-             ((full_get_ns as f64 / key_compare_ns.max(1) as f64 - 1.0) * 100.0));
+    println!(
+        "  📊 {:.3} ns/byte | {:.1}% overhead vs key comparison alone",
+        ns_per_byte,
+        ((full_get_ns as f64 / key_compare_ns.max(1) as f64 - 1.0) * 100.0)
+    );
 }

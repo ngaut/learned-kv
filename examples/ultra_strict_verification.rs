@@ -64,7 +64,11 @@ fn main() {
 
     // Test 3: UUID-style patterns
     println!("\n=== UUID-STYLE PATTERNS ===");
-    test_pattern("uuid-N", |i| format!("{:08x}-{:04x}-{:04x}", i, i % 0x10000, (i * 7) % 0x10000), 10_000);
+    test_pattern(
+        "uuid-N",
+        |i| format!("{:08x}-{:04x}-{:04x}", i, i % 0x10000, (i * 7) % 0x10000),
+        10_000,
+    );
 
     // Test 4: Numeric strings
     println!("\n=== NUMERIC STRINGS ===");
@@ -73,9 +77,21 @@ fn main() {
 
     // Test 5: Mixed content
     println!("\n=== MIXED CONTENT ===");
-    test_pattern("alphanum", |i| format!("test{:05}data{:05}", i, i * 2), 10_000);
-    test_pattern("email-like", |i| format!("user{}@domain{}.com", i, i % 100), 10_000);
-    test_pattern("path-like", |i| format!("/path/to/resource/{}/item", i), 10_000);
+    test_pattern(
+        "alphanum",
+        |i| format!("test{:05}data{:05}", i, i * 2),
+        10_000,
+    );
+    test_pattern(
+        "email-like",
+        |i| format!("user{}@domain{}.com", i, i % 100),
+        10_000,
+    );
+    test_pattern(
+        "path-like",
+        |i| format!("/path/to/resource/{}/item", i),
+        10_000,
+    );
 
     // Test 6: Special characters
     println!("\n=== SPECIAL CHARACTERS ===");
@@ -85,7 +101,11 @@ fn main() {
 
     // Test 7: Long keys
     println!("\n=== LARGE SCALE TESTS ===");
-    test_pattern("long-keys-512B", |i| format!("{}{:010}", "x".repeat(502), i), 5_000);
+    test_pattern(
+        "long-keys-512B",
+        |i| format!("{}{:010}", "x".repeat(502), i),
+        5_000,
+    );
     test_pattern("20K keys", |i| format!("large_test_{}", i), 20_000);
 
     // Test 8: Extreme scale

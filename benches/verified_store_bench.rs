@@ -21,12 +21,10 @@ fn lookup_benchmark(c: &mut Criterion) {
     // Test with 1000 keys
     let data = create_test_data(1000, 64);
     let store = VerifiedKvStore::new(data.clone()).unwrap();
-    let test_key = format!("{}{}",  "a".repeat(54), "0000000500");
+    let test_key = format!("{}{}", "a".repeat(54), "0000000500");
 
     group.bench_function("1k_keys_64_bytes", |b| {
-        b.iter(|| {
-            black_box(store.get(black_box(&test_key)).unwrap())
-        })
+        b.iter(|| black_box(store.get(black_box(&test_key)).unwrap()))
     });
 
     group.finish();
@@ -43,11 +41,7 @@ fn key_length_benchmark(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("verified", key_len),
             key_len,
-            |b, _key_len| {
-                b.iter(|| {
-                    black_box(store.get(black_box(&test_key)).unwrap())
-                })
-            },
+            |b, _key_len| b.iter(|| black_box(store.get(black_box(&test_key)).unwrap())),
         );
     }
 
@@ -60,19 +54,18 @@ fn construction_benchmark(c: &mut Criterion) {
     for size in [100, 1000, 10000].iter() {
         let data = create_test_data(*size, 64);
 
-        group.bench_with_input(
-            BenchmarkId::new("verified", size),
-            size,
-            |b, _size| {
-                b.iter(|| {
-                    black_box(VerifiedKvStore::new(black_box(data.clone())).unwrap())
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("verified", size), size, |b, _size| {
+            b.iter(|| black_box(VerifiedKvStore::new(black_box(data.clone())).unwrap()))
+        });
     }
 
     group.finish();
 }
 
-criterion_group!(benches, lookup_benchmark, key_length_benchmark, construction_benchmark);
+criterion_group!(
+    benches,
+    lookup_benchmark,
+    key_length_benchmark,
+    construction_benchmark
+);
 criterion_main!(benches);

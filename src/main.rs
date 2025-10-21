@@ -11,7 +11,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..1000 {
         data.insert(format!("key_{:04}", i), format!("value_{}", i));
     }
-    println!("Created {} key-value pairs with SEQUENTIAL pattern", data.len());
+    println!(
+        "Created {} key-value pairs with SEQUENTIAL pattern",
+        data.len()
+    );
 
     let store = VerifiedKvStore::new(data)?;
     println!("Built key-value store using PtrHash MPHF with GxHash");
@@ -33,10 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .insert("rust".to_string(), "awesome".to_string())
         .build()?;
 
-    println!(
-        "Small store has {} items:",
-        small_store.len()
-    );
+    println!("Small store has {} items:", small_store.len());
     for (key, value) in small_store.iter() {
         println!("  {}: {}", key, value);
     }

@@ -70,8 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Serialization example
     println!("\nSerialization example:");
     colors.save_to_file("colors.bin")?;
-    let loaded_colors: VerifiedKvStore<String> =
-        VerifiedKvStore::load_from_file("colors.bin")?;
+    let loaded_colors: VerifiedKvStore<String> = VerifiedKvStore::load_from_file("colors.bin")?;
     println!(
         "  Successfully saved and loaded {} color codes",
         loaded_colors.len()
