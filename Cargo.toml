@@ -26,6 +26,9 @@ name = "cache_analysis"
 [[example]]
 name = "component_analysis"
 
+[[example]]
+name = "ultra_strict_verification"
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

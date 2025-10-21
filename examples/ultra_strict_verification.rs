@@ -1,6 +1,5 @@
 /// Ultra-strict verification: Test 15+ string patterns with 10,000+ keys each
 /// This ensures new() works reliably with ALL string patterns at scale
-
 use learned_kv::VerifiedKvStore;
 use std::collections::HashMap;
 

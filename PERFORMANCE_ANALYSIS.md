@@ -45,10 +45,10 @@ Multiple profiling approaches were used:
    - Time complexity: O(n) where n = key length
    - No early termination possible
 
-2. **Current Implementation**: Uses `FastIntHash` (FxHasher64)
-   - Optimized for integers, not strings
-   - Generic hasher interface has overhead
-   - Each byte processed individually
+2. **Current Implementation**: Uses `GxHash` (StringHash)
+   - AES-NI accelerated string hashing
+   - Optimized for string keys
+   - Each byte processed efficiently
 
 3. **vs. Other Operations**:
    - **Key comparison**: O(n) but optimized away when keys match (first byte comparison succeeds)
@@ -156,19 +156,19 @@ Key takeaways:
 
 **Recommendation**: For most use cases, current performance is excellent. Only optimize further if:
 - Key sizes are >1KB (consider using hashes as keys instead)
-- Need sub-10ns lookups (switch to integer keys)
+- Need sub-5ns lookups (use very short keys <32 bytes)
 - Profile shows hash as bottleneck in your specific application
 
 ## Test Files
 
 Profiling code available in:
 - `examples/component_analysis.rs` - Component breakdown analysis
-- `examples/accurate_profile.rs` - Detailed profiling with isolated tests
-- `examples/detailed_profile.rs` - For flamegraph profiling (requires Xcode on macOS)
+- `examples/cache_analysis.rs` - Cache behavior analysis
 - `benches/verified_store_bench.rs` - Criterion benchmarks
 
 Run profiling:
 ```bash
 cargo run --example component_analysis --release
+cargo run --example cache_analysis --release
 cargo bench --bench verified_store_bench
 ```
