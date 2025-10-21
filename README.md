@@ -91,7 +91,7 @@ let store = VerifiedKvStore::new(data)?;  // May panic depending on string conte
 - ❌ `"user_0"`, `"user_1"`, ... fails at ~50-100 keys
 - ❌ `"item_0"`, `"item_1"`, ... fails at ~50-100 keys
 - ❌ Sequential integers `0, 1, 2, ...` fails at ~1000 keys with FxHash
-- **Failure depends on hash collisions with specific prefix bytes**
+- **Root cause**: FxHash produces unique hashes but poor distribution for strings, causing PtrHash's probabilistic MPHF construction to fail (not hash collisions)
 
 **Solution: Always use the correct hash function:**
 - ✅ **String keys** → use `new_string()` (GxHash) - handles ALL patterns reliably
