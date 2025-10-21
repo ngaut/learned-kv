@@ -4,23 +4,23 @@ use std::collections::HashMap;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Learned Key-Value Store Demo");
     println!("==========================");
-    println!("Using UUID-STYLE STRING KEYS (best practice for strings)\n");
+    println!("Using new_string() for String keys - handles ALL patterns reliably!\n");
 
-    // Using UUID-style string keys - best practice for reliable MPHF construction
-    // Well-distributed hash pattern prevents collisions that sequential keys cause
+    // Demonstrate sequential pattern support with new_string()
     let mut data = HashMap::new();
     for i in 0..1000 {
-        data.insert(format!("key-{:04x}-{:04x}", i / 256, i % 256), format!("value_{}", i));
+        data.insert(format!("key_{:04}", i), format!("value_{}", i));
     }
-    println!("Created {} key-value pairs", data.len());
+    println!("Created {} key-value pairs with SEQUENTIAL pattern", data.len());
+    println!("(This would PANIC with new(), but works with new_string()!)\n");
 
-    let store: VerifiedKvStore<String, String> = VerifiedKvStore::new(data)?;
-    println!("Built key-value store using PtrHash MPHF");
+    let store = VerifiedKvStore::new_string(data)?;
+    println!("Built key-value store using PtrHash MPHF with GxHash");
     println!("Store contains {} items", store.len());
     println!("Memory usage: ~{} bytes", store.memory_usage_bytes());
 
     println!("\nTesting lookups (safe - verifies keys):");
-    for test_key in ["key-0000-0000", "key-0000-002a", "key-0003-00e7", "nonexistent_key"] {
+    for test_key in ["key_0000", "key_0042", "key_0999", "nonexistent_key"] {
         match store.get(&test_key.to_string()) {
             Ok(value) => println!("  {}: {}", test_key, value),
             Err(e) => println!("  {}: Error - {}", test_key, e),
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nVerifiedKvStore supports:");
     println!("  - Safe key verification (no wrong values)");
     println!("  - Full API (iter, keys, serialization)");
-    println!("  - UUID-style string keys for reliable MPHF construction");
+    println!("  - new_string() for String keys - handles all patterns reliably");
 
     Ok(())
 }

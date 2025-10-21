@@ -81,24 +81,20 @@ where
 {
     /// Create a new VerifiedKvStore with explicit hasher type.
     ///
-    /// # ⚠️ CRITICAL: MPHF Construction Can Fail ⚠️
+    /// # ⚠️ IMPORTANT: Use `new_string()` for String Keys ⚠️
     ///
-    /// This method builds a Minimal Perfect Hash Function, which can **PANIC** if:
-    /// - String keys have poor hash distribution (common with sequential strings)
-    /// - Too many hash collisions occur (probabilistic, depends on data)
-    /// - Large datasets (>10K keys) with string keys are particularly problematic
+    /// This method uses `H` as the hash function. The default hasher (`FastIntHash`/FxHash)
+    /// is optimized for **integers**, not strings.
     ///
-    /// **Recommended key types for reliability:**
-    /// - Integer keys (u32, u64, i32, i64): Most reliable
-    /// - UUID/hash-based strings: Good
-    /// - Sequential strings (`"key_0001"`, `"key_0002"`, ...): Often fails
+    /// **For String keys, use `new_string()` instead**, which uses GxHash and handles
+    /// all string patterns including sequential ones like "key_0001", "key_0002", etc.
     ///
-    /// **If construction fails:**
-    /// - Try using different key patterns
-    /// - Use integer keys instead of strings
-    /// - Use `HashMap` for datasets that fail MPHF construction
+    /// **This method works well for:**
+    /// - Integer keys (u32, u64, i32, i64)
+    /// - Hash-distributed keys
+    /// - Custom types with good hash distribution
     ///
-    /// There is currently no way to detect failure without panicking.
+    /// **For String keys:** Use `new_string()` for correct hash function selection.
     pub fn new_with_hasher(data: HashMap<K, V>) -> Result<Self, KvError> {
         if data.is_empty() {
             return Err(KvError::EmptyKeySet);

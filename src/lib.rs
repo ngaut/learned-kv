@@ -16,10 +16,9 @@
 //!
 //! ## Optimization Recommendations
 //!
-//! 1. **Use shorter keys** when possible - performance scales linearly with key length
-//! 2. **Use `get()` instead of `get_detailed()`** for hot paths (avoids string allocation)
-//! 3. **Consider key design** - hash-based or numeric keys perform better than long strings
-//! 4. **Use UUID-style strings** for reliable MPHF construction (avoid sequential patterns)
+//! 1. **Use `new_string()` for String keys** - uses GxHash, handles all patterns including sequential
+//! 2. **Use shorter keys** when possible - performance scales linearly with key length
+//! 3. **Use `get()` instead of `get_detailed()`** for hot paths (avoids string allocation)
 //!
 //! ## Example Usage
 //!

@@ -86,10 +86,11 @@ let store = VerifiedKvStore::new(data)?;  // Panics with "key_0001", "key_0002",
 - `new_string()` uses **GxHash** (optimized for strings)
 - FxHash causes hash collisions with common string patterns
 
-**What fails with `new()` (FxHash):**
-- ❌ Sequential patterns: `"key_0001"`, `"key_0002"`, ... (fails at ~100 keys)
-- ❌ Short fixed prefixes: `"user_123"`, `"item_456"`, ... (fails early)
-- ❌ Sequential integers: `0, 1, 2, ...` (fails at ~1000 keys)
+**Why `new()` (FxHash) fails for String keys:**
+- FxHash is optimized for **integers**, not strings
+- Sequential patterns: `"key_0001"`, `"key_0002"`, ... cause hash collisions
+- Short fixed prefixes: `"user_123"`, `"item_456"`, ... cause hash collisions
+- Note: FxHash works fine for integer keys like `0, 1, 2, ...` up to ~1000 keys
 
 **What works with `new_string()` (GxHash):**
 - ✅ **ALL string patterns** including sequential: `"key_0001"`, `"key_0002"`, ...
@@ -122,11 +123,10 @@ Cannot modify after construction - requires full rebuild for updates.
 ✅ Read-heavy workloads with infrequent updates
 ✅ Memory-constrained environments (3 bits/key overhead)
 ✅ Need accurate key verification (no false positives)
-✅ UUID-style or well-distributed keys
+✅ Any key type (use `new_string()` for String keys, `new()` for others)
 
 ### Don't Use When:
 ❌ Need mutable/updateable data (use HashMap or BTreeMap)
-❌ Have sequential key patterns (MPHF construction fails)
 ❌ Frequently reload data (slow MPHF rebuild)
 ❌ Need incremental updates (requires full rebuild)
 
@@ -135,7 +135,8 @@ Cannot modify after construction - requires full rebuild for updates.
 ### Core Operations
 ```rust
 // Construction
-VerifiedKvStore::new(data: HashMap<K, V>) -> Result<Self, KvError>
+VerifiedKvStore::new_string(data: HashMap<String, V>) -> Result<Self, KvError>  // For String keys
+VerifiedKvStore::new(data: HashMap<K, V>) -> Result<Self, KvError>              // For other types
 
 // Lookups
 get(&key) -> Result<&V, KvError>              // Fast, zero-allocation
